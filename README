@@ -1,0 +1,64 @@
+How to compile?
+
+This is a maven project. Go to the directory where the pom.xml file exists and use:
+
+mvn clean install
+
+to build the whole project.
+
+How to run?
+
+After compiling the project, there will be one jar file called lab4-1
+.0-SNAPSHOT-jar-with-dependencies.jar, use:
+
+java -cp lab4-1.0-SNAPSHOT-jar-with-dependencies.jar proxyserver.ProxyServer [instance-name]
+[cache-server-port] [proxy-server-port] to run an instance of proxy server. Use:
+
+java -cp lab4-1.0-SNAPSHOT-jar-with-dependencies.jar proxyserver.CacheServer [instance-name]
+[cache-server-port] to run an instance of cache server.
+
+
+Design details:
+
+There is a class called Advertiser which is responsible for advertising a type of service using
+MDNS message across local network, it implements Bonjour exponential backoff algorithm for
+advertising.
+
+The class Discoverer is responsible for discovering a type of service periodically across local
+network, it also uses Bonjour exponential backoff algorithm as well as Supression of Duplicate
+response algorithm for servie discovery.
+
+The class Responder is generally responsible for responding the requests coming from Advertiser
+and Discoverer. It also contains a Discoverer and Advertiser by itself for advertising and
+discovering services.
+
+The service discovery is done by using PTR MDNS messages. The advertiser advertises services by
+issuing PTR MDNS message of format 'service-name.protocal.domain. PTR IN instance-name
+.service-name.protocal.domain.'.
+The discoverer discovers services by issuing PTR MDNS request of format 'service-name.protocal.domain.'. The
+discoverer also maintains a list of discovered service instances. When the client wants to get
+the actual service resources, it issues a SRV MDNS request of format 'instance-name.service-name
+.protocal.domain.', and the response would look like 'instance-name.service-name.protocal.domain.
+ SRV IN priority weight port target', where 'target' is the address of the service instance.
+
+Cache Server:
+A cache server listens on a tcp port and waits for cache request from peers. Whenever a request
+comes in a new thread is spawned to handle the request. The cache server would return the actual
+response to the requester if it can find response from its local cache,
+otherwise it just returns a fake response 'NullResponse' which the client can tell that no response
+can get from the cache server.
+
+Proxy Server:
+Each proxy server also contains a cache server. It listens on a tcp port and waits for request
+from browser. It spawns a new thread to handle the request whenever a request comes in. The
+request handlers works by first check the response from local cache.
+If the request can be servered from local cache, it returns the response to browser. Otherwise,
+it request the response from other discovered cache server instances. If none of the cache
+instance cached the response, it then makes the request to the actual server to get the response.
+In both cache, the proxy server will cache the response to its local cache and return the
+response to browser.
+
+
+Browser configuration:
+
+Need to set up http proxy in browser settings. Support Firefox, Chrome and Safari.
